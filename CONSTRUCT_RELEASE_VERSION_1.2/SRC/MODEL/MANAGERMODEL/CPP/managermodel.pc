@@ -1,0 +1,552 @@
+#include <sqlca.h>
+#include "./../INCLUDE/managermodel.h"
+#define SQLCA_STORAGE_CLASS extern
+#define _NO_DATA_FOUND 1403
+#define SUCCESS 0
+#define FAILURE -1
+
+EXEC SQL BEGIN DECLARE SECTION;
+char con[30]="h148orauser2d@unixdb";
+char pwd[7]="tcshyd";
+
+int h_lanid, h_temp,h_planid;
+int h_tariff_id;
+char h_tarifftype[20];
+float localrate;
+float nationalrate;
+float gulfrate;
+float africanrate;
+float asianrate;
+float othersrate;
+int temp=0;
+int tplanid;
+int planid;
+int tariff_id;
+int localcalls;
+int nationalcalls;
+int internationalcalls;
+int rental2;
+int newrental;
+
+EXEC SQL END DECLARE SECTION;
+EXEC SQL INCLUDE SQLCA;
+
+int ManagerModel::createTariff(Tariff t,int p_id,int t_id)
+{
+       	
+	exec sql CONNECT :con IDENTIFIED BY :pwd ;
+        int connect_status=sqlca.sqlcode;
+      EXEC SQL BEGIN DECLARE SECTION;
+
+     struct tariffstruct
+     {
+         int tplanid;
+	 int tariffid;
+	 char tarifftype[20];
+	 float localrate;
+	 float nationalrate;
+	 float gulfrate;
+	 float africanrate;
+	 float asianrate;
+	 float othersrate;
+         
+	 }s;
+	 EXEC SQL END DECLARE SECTION;
+
+     s.tplanid=p_id;
+     s.tariffid=t_id;
+     strcpy(s.tarifftype,t.getTariffType().c_str());
+     s.localrate=t.getLocalRate();
+     s.nationalrate=t.getNationalRate();
+     s.gulfrate=t.getGulfRate();
+     s.africanrate=t.getAfricanRate();
+     s.asianrate=t.getAsianRate();
+     s.othersrate=t.getRestOfTheWorldRate();
+     if(connect_status==0)
+{
+     EXEC SQL INSERT INTO TARIFF  VALUES(:s);
+   exec sql commit;
+   int status=sqlca.sqlcode;
+   if(status==0)
+   return 0;
+   else
+   return -1;
+}
+      
+else
+      return -2; 
+}
+
+
+ int ManagerModel::deleteTariff(int p_id,int t_id)
+ {
+          tplanid=p_id;
+          tariff_id=t_id;
+          exec sql CONNECT :con IDENTIFIED BY :pwd ;
+          int connect_status=sqlca.sqlcode;
+          if(connect_status==0)
+          {
+
+	     exec sql delete from tariff where planid=:tplanid and tariffid=:tariff_id;
+          if(sqlca.sqlcode <0)
+          {
+               return -1;
+          }
+          if(sqlca.sqlcode == _NO_DATA_FOUND)
+          {
+               return -2;
+          }
+          EXEC SQL COMMIT WORK RELEASE;  
+          exec sql commit;
+}	     return 1;
+}
+
+ 
+
+vector<Tariff> ManagerModel::viewTariff()
+{
+    
+    vector<Tariff> tvector_obj;
+    Tariff tariff_obj;
+    exec sql CONNECT :con IDENTIFIED BY :pwd;
+    exec sql begin declare section;
+    struct tariffstruct
+{
+    int t_tplanid;
+    int t_tariffid;
+    char t_tarifftype[20];
+    float t_localrate;
+    float t_nationalrate;
+    float t_gulfrate;
+    float t_africanrate;
+    float t_asianrate;
+    float t_othersrate;
+    
+}t;
+ 
+    EXEC SQL END DECLARE SECTION;
+
+    exec sql declare c2 cursor for select * from tariff ;
+    exec sql open c2;
+    if(sqlca.sqlcode == _NO_DATA_FOUND) 
+    {
+         EXEC SQL CLOSE c2;
+         EXEC SQL COMMIT WORK RELEASE;
+         return tvector_obj;
+     }
+    
+    while(1)
+{
+        exec sql fetch c2 into :t;
+        if(sqlca.sqlcode!=0)
+        break;
+        tariff_obj.setPlanID(t.t_tplanid);
+        tariff_obj.setTariffID(t.t_tariffid);
+		tariff_obj.setTariffType((string)t.t_tarifftype);
+        tariff_obj.setLocalRate(t.t_localrate);
+        tariff_obj.setNationalRate(t.t_nationalrate);
+        tariff_obj.setGulfRate(t.t_gulfrate);
+        tariff_obj.setAfricanRate(t.t_africanrate);
+        tariff_obj.setAsianRate(t.t_asianrate);
+        tariff_obj.setrestOfTheWorldRate(t.t_othersrate);
+	tvector_obj.push_back(tariff_obj);
+    }
+    exec sql close c2;
+    exec sql commit;
+    return tvector_obj;
+}
+
+int ManagerModel::validPlanTariffID(int id,int tid)
+{
+     planid=id;
+	tariff_id=tid;
+	exec sql CONNECT :con IDENTIFIED BY :pwd;
+        int connect_status=sqlca.sqlcode;
+        if(connect_status==0)
+{
+	exec sql select count(*) into :temp from tariff where planid=:planid and tariffid=:tariff_id;
+	if(temp <0)
+    {
+        return -1;
+    }
+   else  if(temp ==0)
+     {
+         return -2;
+     }
+    EXEC SQL COMMIT WORK RELEASE;  
+        return 1;
+}
+}
+int ManagerModel::validPlanID(int id)
+{
+        planid=id;
+	exec sql connect :con identified by :pwd;
+         int connect_status=sqlca.sqlcode;
+        if(connect_status==0)
+{
+
+        exec sql select count(*) into :temp from tariff where planid=:planid;
+         
+	if(temp<0)
+    {
+        return -1;
+    }
+    if(temp==0)
+     {
+         return -2;
+     }
+    
+    EXEC SQL COMMIT WORK RELEASE;  
+       return 1;
+}
+}
+
+int ManagerModel::updateLocalCallcost(int pid,int tid,float newlocalcallcost)
+{
+	tplanid=pid;
+	tariff_id=tid;
+	localrate=newlocalcallcost;
+	exec sql CONNECT :con IDENTIFIED BY :pwd ;
+	int connect_status=sqlca.sqlcode;
+	if(connect_status==0)
+	{
+		exec sql update tariff set localrate=:localrate where planid=:tplanid and tariffid=:tariff_id;
+                exec sql commit;
+		int temp=sqlca.sqlcode;
+		if(temp <0)
+		{
+			return -1;
+		}
+		if(temp==0)
+		{
+			return -2;
+		}
+		EXEC SQL COMMIT WORK RELEASE;  
+		return 1;
+
+
+	}     }
+int ManagerModel::updateNationalCallCost(int pid,int tid,float newnationalcallcost)
+{
+	tplanid=pid;
+	tariff_id=tid;
+	nationalrate=newnationalcallcost;
+	exec sql CONNECT :con IDENTIFIED BY :pwd ;
+	int connect_status=sqlca.sqlcode;
+	if(connect_status==0)
+	{ 
+		exec sql update tariff set nationalrate=:nationalrate where planid=:tplanid and tariffid=:tariff_id;
+		exec sql commit;
+                if(sqlca.sqlcode<0)
+		{
+			return -1;
+		}
+		if(sqlca.sqlcode==0)
+		{
+			return -2;
+		}
+		EXEC SQL COMMIT WORK RELEASE;  
+
+		exec sql commit;
+		return 1;
+	}
+}
+int ManagerModel::updateGulfCallcost(int pid,int tid,float newgulfcallcost)
+{
+       tplanid=pid;
+       tariff_id=tid;
+       gulfrate=newgulfcallcost;
+       exec sql CONNECT :con IDENTIFIED BY :pwd ;
+        int connect_status=sqlca.sqlcode;
+       if(connect_status==0)
+{
+
+       exec sql update tariff set gulfrate=:gulfrate where planid=:tplanid and tariffid=:tariff_id;
+	exec sql commit;
+if(sqlca.sqlcode<0)
+    {
+        return -1;
+    }
+    if(sqlca.sqlcode==0)
+     {
+         return -2;
+     }
+    EXEC SQL COMMIT WORK RELEASE;  
+       
+
+       exec sql commit;
+        return 1;
+}
+}
+int ManagerModel::updateAfricanCallCost(int pid,int tid,float newafricancallcost)
+{
+       tplanid=pid;
+       tariff_id=tid;
+       africanrate=newafricancallcost;
+       exec sql CONNECT :con IDENTIFIED BY :pwd ;
+        int connect_status=sqlca.sqlcode;
+       if(connect_status==0)
+        {
+        exec sql update tariff set africanrate=:africanrate where planid=:tplanid and tariffid=:tariff_id;
+        exec sql commit;        
+int temp=sqlca.sqlcode;
+if(temp <0)
+    {
+        return -1;
+    }
+    if(temp==0)
+     {
+         return -2;
+     }
+    EXEC SQL COMMIT WORK RELEASE;  
+       
+       exec sql commit;
+      return 1;
+
+}
+}
+
+int ManagerModel::updateAsianCallCost(int pid,int tid,float newasiancallcost)
+{
+	tplanid=pid;
+	tariff_id=tid;
+	asianrate=newasiancallcost;
+	exec sql CONNECT :con IDENTIFIED BY :pwd ;
+	int connect_status=sqlca.sqlcode;
+	if(connect_status==0)
+	{
+		exec sql update tariff set asianrate=:asianrate where planid=:tplanid and tariffid=:tariff_id;
+		exec sql commit;
+                int temp=sqlca.sqlcode;
+
+		if(temp<0)
+		{
+			return -1;
+		}
+		if(temp==0)
+		{
+			return -2;
+		}
+		EXEC SQL COMMIT WORK RELEASE;  
+
+		exec sql commit;
+		return 1;
+
+	}
+}
+int ManagerModel::updateOthersCallCost(int pid,int tid,float newotherscallcost)
+{
+       tplanid=pid;
+       tariff_id=tid;
+       othersrate=newotherscallcost;
+       exec sql CONNECT :con IDENTIFIED BY :pwd ;
+       int connect_status=sqlca.sqlcode;
+       if(connect_status==0)
+        {
+       exec sql update tariff set internationalrate=:othersrate where planid=:tplanid and tariffid=:tariff_id;
+       exec sql commit;
+       int temp=sqlca.sqlcode;
+if(temp <0)
+    {
+        return -1;
+    }
+    if(temp==0)
+     {
+         return -2;
+     }
+    EXEC SQL COMMIT WORK RELEASE;  
+       
+       exec sql commit;
+       return 1;
+}
+}
+int ManagerModel::validBonusID(int id)
+{
+        planid=id;
+        exec sql CONNECT :con IDENTIFIED BY :pwd;
+	exec sql select count(*) into :temp from bonus where planid=:planid;
+
+	if(temp<0)
+    {
+        return -1;
+    }
+    if(temp==0)
+     {
+         return -2;
+     }
+    EXEC SQL COMMIT WORK RELEASE;  
+        return 1;
+
+}
+
+int ManagerModel::createBonus(Bonus b,int id)
+{
+       	Stringlib sl;
+	exec sql CONNECT :con IDENTIFIED BY :pwd ;
+      EXEC SQL BEGIN DECLARE SECTION;
+
+     struct bonusstruct
+     {
+         int bplanid;
+	 int blocal;
+	int bnational;
+	int binternational;
+	int brental;
+}bs;
+EXEC SQL END DECLARE SECTION;
+
+     bs.bplanid=id;
+     bs.blocal=b.getLocalCalls();
+     bs.bnational=b.getNationalCalls();
+     bs.binternational=b.getInternationalCalls();
+     bs.brental=b.getRental();
+
+     EXEC SQL INSERT INTO bonus  VALUES(:bs);
+     
+      exec sql commit;
+       return 1;
+}
+ int ManagerModel::deleteBonus(int p_id)
+ {
+          planid=p_id;
+          exec sql CONNECT :con IDENTIFIED BY :pwd ;
+	     exec sql delete from bonus where planid=:planid ;
+          if(sqlca.sqlcode <0)
+          {
+              return -1;
+          }
+          if(sqlca.sqlcode == _NO_DATA_FOUND)
+          {
+              return -2;
+          }
+          EXEC SQL COMMIT WORK RELEASE;  
+       
+          exec sql commit;
+	     return 1;
+}
+vector<Bonus> ManagerModel::viewBonus()
+{
+    
+    vector<Bonus> bvector_obj;
+	Bonus bonus_obj;
+    Stringlib s;
+    exec sql CONNECT :con IDENTIFIED BY :pwd;
+    exec sql begin declare section;
+    struct bonusstruct
+{
+    int b_planid;
+    int b_local;
+    int b_national;
+    int b_international;
+    int b_rental;
+   
+}b;
+ 
+ EXEC SQL END DECLARE SECTION;
+
+    exec sql  declare c3 cursor for select * from bonus;
+    exec sql open c3;
+    if(sqlca.sqlcode == _NO_DATA_FOUND) 
+    {
+         EXEC SQL CLOSE c3;
+         EXEC SQL COMMIT WORK RELEASE;
+         return bvector_obj;
+     }
+
+
+    while(1)
+    {
+        exec sql fetch c3 into :b;
+        if(sqlca.sqlcode!=0)
+        break;
+        bonus_obj.setPlanID(b.b_planid);
+        bonus_obj.setLocalCalls(b.b_local);
+        bonus_obj.setNationalCalls(b.b_national);
+        bonus_obj.setInternationalCalls(b.b_international);
+        bonus_obj.setRental(b.b_rental);
+	  bvector_obj.push_back(bonus_obj);
+    }
+    exec sql close c3;
+    exec sql commit;
+    return bvector_obj;
+}
+
+int ManagerModel::updateLocalCalls(int pid,int newlocalcalls)
+{
+      planid=pid;
+       localcalls=newlocalcalls;
+       exec sql CONNECT :con IDENTIFIED BY :pwd ;
+       exec sql update bonus set local=:localcalls where planid=:planid;
+if(temp<0)
+    {
+        return -1;
+    }
+    if(temp==0)
+     {
+         return -2;
+     }
+    EXEC SQL COMMIT WORK RELEASE;  
+      
+       exec sql commit;
+        return 1;
+}
+
+int ManagerModel::updateNationalCalls(int pid,int newnationalcalls)
+{
+       planid=pid;
+       nationalcalls=newnationalcalls;
+       exec sql CONNECT :con IDENTIFIED BY :pwd ;
+       exec sql update bonus set national=:nationalcalls where planid=:planid;
+if(temp <0)
+    {
+        return -1;
+    }
+    if(temp==0)
+     {
+         return -2;
+     }
+    EXEC SQL COMMIT WORK RELEASE;  
+       
+       exec sql commit;
+       return 1;
+}
+int ManagerModel::updateInternationalCalls(int pid,int newinternationalcalls)
+{
+       planid=pid;
+       internationalcalls=newinternationalcalls;
+       exec sql CONNECT :con IDENTIFIED BY :pwd ;
+       exec sql update bonus set international=:internationalcalls where planid=:planid;
+if(temp<0)
+    {
+        return -1;
+    }
+    if(temp==0)
+     {
+         return -2;
+     }
+    EXEC SQL COMMIT WORK RELEASE;  
+       
+       exec sql commit;
+        return 1;
+
+}
+int ManagerModel::updateRental(int pid,int newrental)
+{
+      planid=pid;
+      rental2=newrental;
+       exec sql CONNECT :con IDENTIFIED BY :pwd ;
+       exec sql update bonus set rental=:newrental  where planid=:planid;
+if(temp <0)
+    {
+        return -1;
+    }
+    if(temp==0)
+     {
+         return -2;
+     }
+    EXEC SQL COMMIT WORK RELEASE;  
+       
+       exec sql commit;
+       return 1;
+
+ }

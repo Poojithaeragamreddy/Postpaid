@@ -1,0 +1,57 @@
+#include <string>
+#include <sqlca.h>
+#define SQLCA_STORAGE_CLASS extern
+#include "./../INCLUDE/model.h"
+
+LoginModel::LoginModel()
+{  
+}
+LoginModel::~LoginModel()
+{   
+	EXEC SQL COMMIT WORK RELEASE;
+}
+
+int LoginModel :: verifyLogin(Login &login)
+{ 
+
+ 	EXEC SQL BEGIN DECLARE SECTION;
+	char h_dbUsername[30] = "h148orauser2D@unixdb";
+	char h_dbPassword[7] = "tcshyd";
+	char h_username[20];  
+	char h_password[20]; 
+	char h_designation[30];
+	int h_count;
+        int lh_count;
+	EXEC SQL END DECLARE SECTION;
+	EXEC SQL INCLUDE SQLCA;
+
+	EXEC SQL CONNECT :h_dbUsername IDENTIFIED BY :h_dbPassword;
+
+        int connect_status = sqlca.sqlcode;
+	if(connect_status == 0)
+        {
+		strcpy(h_username,login.m_username.c_str());
+		strcpy(h_password,login.m_password.c_str());
+		strcpy(h_designation,login.m_designation.c_str());
+	
+		EXEC SQL SELECT COUNT(*) INTO :h_count FROM LOGIN WHERE USERNAME = :h_username AND PASSWORD = :h_password; 
+		if(h_count == 1) 
+		{  
+                  EXEC SQL SELECT COUNT(*) INTO :lh_count FROM LOGIN WHERE ROLE= :h_designation AND USERNAME= :h_username;
+                  if(lh_count == 1) 
+		   {
+			return 0;
+                   }
+                   else
+                       return -2;
+		}  
+	       else  
+	      {    
+		return -1;   
+              }
+          }
+        else 
+          return -3;
+}
+
+

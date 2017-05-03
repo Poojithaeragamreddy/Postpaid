@@ -1,0 +1,605 @@
+#include <sqlca.h>
+#include "./../INCLUDE/crmodel.h"
+#include "./../../../CLASS/CONNECTION/INCLUDE/connection.h"
+#include "./../../../CLASS/CALLLOG/INCLUDE/calllog.h"
+#include "./../../../CLASS/BILLING/INCLUDE/billing.h"
+#include "./../../../CLASS/STRINGLIB/INCLUDE/stringlib.h"
+#include "./../../../CLASS/CUSTOMER/INCLUDE/customer.h"
+#define SQLCA_STORAGE_CLASS extern
+EXEC SQL BEGIN DECLARE SECTION;
+char h_con[30]="h148orauser2d@unixdb";
+char h_pwd[7]="tcshyd";
+int a;
+int id;
+int Id;
+int Id1;
+int connection_id;
+int status;
+char name[21];
+char email[36];
+char address[31];
+char dob[12];
+char gen[3];
+char proof[21];
+char  num[12];
+char date[20];
+char due_date[12];
+char calltime[12];
+int num1;
+float charge;
+float rate;
+int duration;
+char destination[20];
+char type[10];
+char date1[11];
+float amount;
+int local;
+int local1;
+int national1;
+int international1;
+int d;
+int national;
+int international;
+int rental;
+EXEC SQL END DECLARE SECTION;
+EXEC SQL INCLUDE SQLCA;
+
+void CustomerRepresentativeModel :: insertData(Customer c)
+{
+    CustomerRepresentativeView  v;
+    strcpy(name,c.getName().c_str());
+    strcpy(email,c.getEmailID().c_str());
+
+    strcpy(address,c.getAddress().c_str());
+    strcpy(date,c.getDateOfBirth().c_str());
+    strcpy(proof,c.getProof().c_str());
+    strcpy(gen,c.getGender().c_str());
+    strcpy(num,c.getMobile().c_str());
+    exec sql CONNECT :h_con IDENTIFIED BY :h_pwd ;
+    exec sql select cust7.nextval into id from dual;
+    exec sql insert into customer1 values(:id,:name,:address,:email,:num,:gen,:proof,:date);
+    if(sqlca.sqlcode!=0)
+    {
+        v.display("\tRegistration Failed");
+    }
+    else
+    {
+        v.display("\tRegistration Successful");
+    }
+    exec sql commit;
+}
+int CustomerRepresentativeModel :: validID(int ID)
+{
+    id = ID;
+    exec sql CONNECT :h_con IDENTIFIED BY :h_pwd ;
+    exec sql select count(*)  into :a from customer1 where  CUSTOMER_ID=:id;
+    if(a==1)
+    {
+        return 0;
+    }
+    else
+    {
+        return -1;
+    }
+}
+int CustomerRepresentativeModel :: validConnectionID(int ID)
+{
+    num1 = ID;
+    exec sql CONNECT :h_con IDENTIFIED BY :h_pwd ;
+    exec sql select count(*)  into :a from connection1 where  CONNECTIONID= :num1;
+    exec sql select STATUS into :status from connection1 where  CONNECTIONID= :num1;
+    if(a==1 && status == 1)
+    {
+        return 0;
+    }
+    else
+    {
+        return -1;
+    }
+}
+int CustomerRepresentativeModel :: validPlanID(int ID)
+{
+    id = ID;
+    exec sql CONNECT :h_con IDENTIFIED BY :h_pwd ;
+    exec sql select count(*)  into :a from tariff  where  planid= :id;
+    if(a==1||a>1)
+    {
+        return 0;
+    }
+    else
+    {
+        return -1;
+    }
+}
+
+void CustomerRepresentativeModel ::updateData(int ID,int choice, string str)
+{
+    CustomerRepresentativeView  v;
+    id = ID;
+    exec sql CONNECT :h_con IDENTIFIED BY :h_pwd ;
+    switch(choice)
+    {
+      case 1 : strcpy(name,str.c_str());
+               exec sql update customer1 set NAME = :name where 
+               CUSTOMER_ID=:id;
+                
+    if(sqlca.sqlcode!=0)
+    {
+        v.display("\tUpdate Unsuccessful");
+    }
+    else
+    {
+        v.display("\tUpdate Successful");
+    }
+               exec sql update connection1 set NAME = :name   
+               where CUSTOMER_ID=:id;                                           
+               exec sql commit;
+               break;
+      case 2  :strcpy(address,str.c_str());
+               exec sql update customer1 set ADDRESS = :address	where CUSTOMER_ID=:id;  
+    if(sqlca.sqlcode!=0)
+    {
+        v.display("\tUpdate Unsuccessful");
+    }
+    else
+    {
+        v.display("\tUpdate successful");
+    }
+               exec sql update connection1 set ADDRESS=:address  where CUSTOMER_ID=:id;
+               exec sql commit;
+               break;
+      case 3  :strcpy(email,str.c_str());
+               exec sql update customer1 set EMAIL_ID = :email where CUSTOMER_ID=:id;                       
+    if(sqlca.sqlcode!=0)
+    {
+        v.display("\tUpdate Unsuccessful");
+    }
+    else
+    {
+        v.display("\tUpdate Successful");
+    }
+               exec sql commit;
+               break;
+    }
+}
+void CustomerRepresentativeModel ::updatePhone(int ID,string number)
+{
+    CustomerRepresentativeView  v;
+    strcpy(num,number.c_str());
+    exec sql update customer1 set phone_number = :num where CUSTOMER_ID=:id;
+    if(sqlca.sqlcode!=0)
+    {
+        v.display("\tUpdate Unsuccessful");
+    }
+    else
+    {
+        v.display("\tUpdate Successful");
+    }
+    exec sql commit;
+ }
+
+vector<Customer> CustomerRepresentativeModel :: viewCustomerList()
+{
+    CustomerRepresentativeView  v;
+    Stringlib s;
+    vector<Customer> vector_obj;
+    Customer cus;
+    exec sql CONNECT :h_con IDENTIFIED BY :h_pwd;
+    exec sql begin declare section;
+    struct customerstruct
+    {
+        int  id;
+        char name[21];
+        char address[31];
+        char email[36];
+        char mobile[12];
+        char gender[3];
+        char proof[21];
+        char dob[11];
+    }c;
+    EXEC SQL END DECLARE SECTION;
+
+    exec sql  declare c1 cursor for select * from customer1;
+    exec sql open c1;
+    while(1)
+    {
+        exec sql fetch c1 into :c;
+      
+        if(sqlca.sqlcode!=0)
+        {
+               break;
+        }
+        cus.setID(c.id);
+        s.rtrim(c.gender);
+
+        cus.setGender(c.gender);
+        s.rtrim(c.dob);
+        cus.setDateOfBirth(c.dob);
+        s.rtrim(c.email);
+        cus.setEmailID(c.email);
+        s.rtrim(c.name);
+        cus.setName(c.name);
+        s.rtrim(c.address);
+        cus.setAddress(c.address); 
+        s.rtrim(c.proof);
+        cus.setProof(c.proof);
+        cus.setMobile(c.mobile);
+        vector_obj.push_back(cus);
+
+     }
+    exec sql close c1;
+    exec sql commit;
+    return vector_obj;
+}
+Customer CustomerRepresentativeModel :: viewDetails(int ID)
+{
+    CustomerRepresentativeView  v;
+    Stringlib s;
+    Id = ID;
+    Customer cus;
+    exec sql CONNECT :h_con IDENTIFIED BY :h_pwd;
+    exec sql begin declare section;
+    struct customerstruct
+    {
+        int  id;
+        char name[21];
+        char address[31];
+        char email[36];
+        char mobile[12];
+        char gender[3];
+        char proof[21];
+        char dob[11];
+        
+    }c;
+    EXEC SQL END DECLARE SECTION;
+
+
+    exec sql  declare c2 cursor for select * from customer1 where CUSTOMER_ID = :Id;
+    exec sql open c2;
+    exec sql fetch c2 into :c;
+    if(sqlca.sqlcode!=0)
+    {
+        v.display("\terror");
+    }
+    cus.setID(c.id);
+    cus.setGender(c.gender);
+    s.rtrim(c.dob);
+    cus.setDateOfBirth(c.dob);
+    s.rtrim(c.email);
+    cus.setEmailID(c.email);
+	cus.setName(c.name);
+	cus.setAddress(c.address);
+    s.rtrim(c.proof);
+    cus.setProof(c.proof);
+    cus.setMobile(c.mobile);
+    exec sql close c2;
+    exec sql commit;
+    return cus;
+}
+Connection CustomerRepresentativeModel :: viewConnectionDetails(int ID)
+{
+    CustomerRepresentativeView  v;
+    Stringlib s;
+    num1 = ID;
+    Connection conn;
+    exec sql CONNECT :h_con IDENTIFIED BY :h_pwd;
+    exec sql begin declare section;
+    struct connectionstruct
+    {
+        int cust_id;
+        char name[21];
+        char address[31];
+        int  conn_id;
+        int status;
+        int planid;
+        char doc[12];
+    }cc;
+    EXEC SQL END DECLARE SECTION;
+
+    exec sql  declare c3 cursor for select * from connection1 where CONNECTIONID = :num1;
+    exec sql open c3;
+    exec sql fetch c3 into :cc;
+    if(sqlca.sqlcode!=0)
+    {
+        v.display("\tError");
+    }
+    conn.setID(cc.cust_id);
+    s.rtrim(cc.doc);
+    conn.setDate(cc.doc);
+    s.rtrim(cc.name);
+    conn.setName(cc.name);
+    s.rtrim(cc.address);
+    conn.setAddress(cc.address);
+    conn.setConnectionID(cc.conn_id);
+    conn.setStatus(cc.status); 
+    conn.setPlanID(cc.planid); 
+    exec sql close c3;
+    exec sql commit;
+    return conn;
+}
+
+vector<Connection> CustomerRepresentativeModel :: viewConnectionsList()
+{
+    CustomerRepresentativeView  v;
+    Stringlib s;
+    vector<Connection> vector_obj;
+    Connection conn;
+    exec sql CONNECT :h_con IDENTIFIED BY :h_pwd;
+    exec sql begin declare section;
+    struct connectionstruct
+    {
+        int cust_id;
+        char name[21];
+        char address[31];
+        int conn_id;
+        int status;
+        int planid;
+        char doc[12];
+    }c;
+    EXEC SQL END DECLARE SECTION;
+    exec sql  declare c4 cursor for select * from connection1;
+    exec sql open c4;
+    if(sqlca.sqlcode!=0)
+    {
+        v.display("\tError");
+    }
+    while(1)
+    {
+        exec sql fetch c4 into :c;
+        if(sqlca.sqlcode!=0)
+        {
+            break;
+        }
+        conn.setID(c.cust_id);
+        s.rtrim(c.doc);
+        conn.setDate(c.doc);
+        s.rtrim(c.name);
+        conn.setName(c.name);
+        s.rtrim(c.address);
+        conn.setAddress(c.address);
+        conn.setConnectionID(c.conn_id);
+        conn.setStatus(c.status); 
+        conn.setPlanID(c.planid); 
+        vector_obj.push_back(conn);
+      }
+     exec sql close c4;
+     exec sql commit;
+     return vector_obj;
+}
+
+
+void CustomerRepresentativeModel :: addConnection(Connection conn)
+{
+    CustomerRepresentativeView  v;
+    exec sql CONNECT :h_con IDENTIFIED BY :h_pwd ;
+    strcpy(name,conn.getName().c_str());
+    strcpy(address,conn.getAddress().c_str());
+    id = conn.getID();
+    status = conn.getStatus();
+    Id = conn.getPlanID();
+    exec sql select con1.nextval into connection_id from dual;
+    exec sql select sysdate into date1 from dual;
+    exec sql insert into connection1 values (:id ,:name,:address,:connection_id,:status,:Id,:date1);
+    if(sqlca.sqlcode!=0)
+    {
+        v.display("\tError");
+    }
+    else
+    {
+        v.display("\tConnection Addedd Successfully");
+    }
+    exec sql commit;
+}
+void CustomerRepresentativeModel :: enterCall(Calllog log)
+{
+    CustomerRepresentativeView  v;
+    exec sql CONNECT :h_con IDENTIFIED BY :h_pwd ;
+    connection_id = log.getConnectionID();
+    strcpy(type,log.getCallType().c_str());
+    strcpy(destination,log.getCallDestination().c_str());
+    duration = log.getCallDuration();
+    exec sql select planid into :id from connection1 where CONNECTIONID = :connection_id;
+    if(strcmp(destination,"gulf")==0)
+    {
+        exec sql select gulfrate  into :rate from TARIFF where calltype = :type and PLANID = :id;
+    }
+    else if(strcmp(destination,"local")==0)
+    {
+        exec sql select localrate  into :rate from TARIFF where  calltype= :type and PLANID = :id;
+    }
+    else if(strcmp(destination,"national")==0)
+    {
+        exec sql select nationalrate  into :rate from TARIFF where calltype = :type and PLANID = :id;
+    }
+    else if(strcmp(destination,"asian")==0)
+    {
+        exec sql select asianrate  into :rate from TARIFF where calltype = :type and PLANID = :id;
+    }
+    else if(strcmp(destination,"african")==0)
+    {
+        exec sql select africanrate  into :rate from TARIFF where calltype = :type and PLANID = :id;
+    }
+    else 
+    {
+        exec sql select internationalrate  into :rate from TARIFF where calltype = :type and PLANID = :id;
+    }
+    exec sql select count(*) into  :a from calllog where CONNECTIONID = :connection_id and STATUS = 0;
+    if(a == 0)
+    {
+        exec sql select local into :local from bonus where planid = :id;
+        exec sql select national into :national from bonus where planid = :id;
+        exec sql select international into :international from bonus where planid = :id;
+    }
+    if(strcmp(type,"sms")==0)
+    {
+           charge = rate;
+    }
+    else
+    {   
+        if(strcmp(destination,"local") == 0)
+        {
+         local1=local;
+        local = local - duration/60;
+        if(local <0)
+          {
+             d=duration/60 -local1;
+	    charge = rate * d*60;
+        }
+        else
+        {
+            charge = 0;
+        }
+        }
+        else if(strcmp(destination,"national")==0)
+        {
+            national1=national;
+            national = national -duration/60;
+            if(national < 0)
+            {
+                    d=duration/60 -national1;
+
+                charge = rate * d*60;
+            }
+            else
+            {
+                charge = 0;
+            }
+        }
+        else
+        {
+            international1=international;
+            international = international -duration/60;
+            if(international <0)
+            {
+                 d=duration/60 -international1;
+
+                charge = rate * d*60;
+            }
+            else
+            {
+                charge = 0;
+            }
+        }
+           
+    }
+
+    status = 0;   
+    exec sql select sysdate into :date from dual; 
+    exec sql insert into calllog values (:connection_id ,:charge,:rate,:duration,:type,:destination,:date,:status);
+    if(sqlca.sqlcode!=0)
+    {
+        v.display("\tError");
+    }
+    else
+    {
+        v.display("\tCall Details Added");
+    }
+    exec sql commit;
+}
+void CustomerRepresentativeModel :: deactivate(int id)
+{
+    CustomerRepresentativeView  v;
+    num1 = id;   
+    exec sql CONNECT :h_con IDENTIFIED BY :h_pwd ;
+    exec sql update connection1 set status = 0 where connectionid = :num1;
+    
+    if(sqlca.sqlcode!=0)
+    {
+        v.display("\tError");
+    }
+    else
+    {
+        v.display("\tDeactivation Successful");
+    }
+    exec sql commit;
+}
+
+void CustomerRepresentativeModel :: generateBill(int id)
+{
+    CustomerRepresentativeView  v;
+        num1 = id;
+exec sql CONNECT :h_con IDENTIFIED BY :h_pwd;
+
+        exec sql select bill3.nextval into :Id1 from dual;
+        exec sql SELECT (sysdate+20) into :due_date from dual;
+        exec sql select sysdate into :date from dual;
+        exec sql select sum(callcost) into :amount from calllog where CONNECTIONID = :num1 and STATUS = 0;
+        exec sql select PLANID into :Id from connection1  where CONNECTIONID = :num1;
+        exec sql select rental into :rental from BONUS where PLANID = :Id;
+        amount = amount + rental;
+        exec sql update calllog set status = 1 where CONNECTIONID = :num and STATUS = 0;
+        status = 0;
+        exec sql insert into billing values(:num1,:Id1,:date,:due_date,:amount,:status);
+    if(sqlca.sqlcode!=0)
+    {
+        v.display("\tError");
+    }
+    else
+    {
+        v.display("\tBill Generated");
+    }
+        exec sql commit;
+}
+
+Billing CustomerRepresentativeModel :: viewBill(int id)
+{
+    CustomerRepresentativeView  v;
+    Stringlib s;
+    num1=id;
+    Billing bill;
+    exec sql CONNECT :h_con IDENTIFIED BY :h_pwd;
+    exec sql begin declare section;
+    
+    struct billstruct
+    {
+     int connection_id;
+     int bill_id;
+     char date[12];
+     char due_date[12];
+     int amount;
+     int status;
+     }b;
+    EXEC SQL END DECLARE SECTION;
+
+    
+    exec sql  declare c6 cursor for select * from billing where CONNECTIONID = :num1;
+    exec sql open c6;
+    exec sql fetch c6 into :b;
+    if(sqlca.sqlcode!=0)
+    {
+        v.display("\tError");
+    }
+    bill.setConnectionID(b.connection_id);
+    bill.setBillID(b.bill_id);
+    s.rtrim(b.date);
+    bill.setDate(b.date);
+    s.rtrim(b.due_date);      
+    bill.setDueDate(b.due_date);
+    bill.setAmount(b.amount);
+    bill.setStatus(b.status);
+    exec sql close c6;
+    exec sql commit;
+    return bill;
+}
+    
+
+
+void CustomerRepresentativeModel :: payBill(int id)
+{
+    CustomerRepresentativeView  v;
+    Id = id;   
+    exec sql CONNECT :h_con IDENTIFIED BY :h_pwd;
+    exec sql update billing set status = 1 where BILLID = :Id;
+    
+    if(sqlca.sqlcode!=0)
+    {
+        v.display("\tError");
+     }
+    else
+    {
+        v.display("\tBill Paid");
+    }
+    exec sql commit;
+} 
+
+
